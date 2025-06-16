@@ -1,11 +1,9 @@
--- 先刪除所有表格，使用 CASCADE 移除依賴
 DROP TABLE IF EXISTS transactions CASCADE;
 DROP TABLE IF EXISTS wallets CASCADE;
 DROP TABLE IF EXISTS price_history CASCADE;
 DROP TABLE IF EXISTS users CASCADE;
 DROP TABLE IF EXISTS coins CASCADE;
 
--- 創建表格，按依賴順序
 CREATE TABLE coins (
     coin_id SERIAL PRIMARY KEY,
     symbol VARCHAR(10) NOT NULL,
@@ -45,10 +43,10 @@ CREATE TABLE transactions (
     timestamp TIMESTAMP DEFAULT NOW()
 );
 
--- 手動初始化 coins 數據
-INSERT INTO coins (coin_id, symbol, current_price, change_24h) VALUES
-(1, 'BTC', 60000.00, 2.5),
-(2, 'ETH', 3000.00, 1.8),
-(3, 'BNB', 500.00, 0.5),
-(4, 'ADA', 1.20, -0.3),
-(5, 'XRP', 0.50, 0.1);
+INSERT INTO coins (symbol, current_price, change_24h) VALUES
+('USD', 1.00, 0.0),
+('BTC', 60000.00, 2.5),
+('ETH', 3000.00, 1.8),
+('BNB', 500.00, 0.5),
+('ADA', 1.20, -0.3),
+('XRP', 0.50, 0.1);

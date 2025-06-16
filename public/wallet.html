@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <title>錢包</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 0; background-color: #f0f2f5; padding: 20px; }
+    .header { background-color: #1a1a1a; color: #fff; padding: 10px 20px; }
+    .wallet-section { background-color: #fff; padding: 15px; border-radius: 5px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
+    table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+    th, td { padding: 10px; border: 1px solid #ddd; text-align: left; }
+    th { background-color: #f0f0f0; }
+  </style>
+</head>
+<body>
+  <div class="header">加密貨幣交易所 - 錢包</div>
+  <div class="wallet-section">
+    <h2>我的餘額</h2>
+    <select id="userSelect">
+      <option value="1">用戶 1</option>
+      <!-- 可動態生成 -->
+    </select>
+    <table id="walletTable">
+      <thead>
+        <tr>
+          <th>幣種</th>
+          <th>餘額</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+  <script>
+    async function loadWallet(userId) {
+      const response = await fetch(`/api/users/${userId}/wallet`);
+      const data = await response.json();
+      const tbody = document.querySelector('#walletTable tbody');
+      tbody.innerHTML = '';
+      data.forEach(wallet => {
+        const row = document.createElement('tr');
+        row.innerHTML = `<td>${wallet.symbol}</td><td>${wallet.balance.toFixed(2)}</td>`;
+        tbody.appendChild(row);
+      });
+    }
+
+    document.getElementById('userSelect').addEventListener('change', (e) => {
+      loadWallet(e.target.value);
+    });
+
+    document.addEventListener('DOMContentLoaded', () => {
+      loadWallet(1); // 預設加載用戶 1
+    });
+  </script>
+</body>
+</html>

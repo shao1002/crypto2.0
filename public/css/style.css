@@ -10,3 +10,9 @@ body {
   height: 400px;
   width: 100%;
 }
+.text-success {
+  color: green;
+}
+.text-danger {
+  color: red;
+}

@@ -2,97 +2,62 @@
 <html lang="zh-TW">
 <head>
   <meta charset="UTF-8">
-  <title>交易模擬</title>
+  <title>交易頁面 - 加密貨幣交易所</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
   <style>
-    body { font-family: Arial, sans-serif; margin: 20px; }
-    .chart-container { width: 100%; height: 300px; }
-    .trade-form { margin-top: 20px; }
+    body { font-family: Arial, sans-serif; margin: 0; background-color: #f0f2f5; color: #333; }
+    .header { background-color: #1a1a1a; color: #fff; padding: 10px 20px; }
+    .container { display: flex; padding: 20px; }
+    .main-content { flex-grow: 1; }
+    .chart-container { width: 100%; height: 400px; margin-bottom: 20px; }
+    .trade-section { background-color: #fff; padding: 15px; border-radius: 5px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
+    .trade-section select, .trade-section input, .trade-section button { padding: 10px; margin: 5px 0; width: 100%; max-width: 200px; }
+    .trade-section button { background-color: #f0b90b; color: #fff; border: none; border-radius: 5px; cursor: pointer; }
+    .trade-section button:hover { background-color: #d4a007; }
   </style>
 </head>
 <body>
-  <h2>交易模擬</h2>
-  <div id="price-display"></div>
-  <div class="chart-container">
-    <canvas id="price-chart"></canvas>
+  <div class="header">加密貨幣交易所 - 交易</div>
+  <div class="container">
+    <div class="main-content">
+      <div class="chart-container">
+        <select id="chartCoinSelect">
+          <option value="2">BTC/USDT</option>
+          <option value="3">ETH/USDT</option>
+          <option value="4">BNB/USDT</option>
+          <option value="5">ADA/USDT</option>
+          <option value="6">XRP/USDT</option>
+        </select>
+        <select id="timeRange">
+          <option value="1H">1 小時</option>
+          <option value="1D">1 天</option>
+          <option value="1W">1 週</option>
+        </select>
+        <canvas id="priceChart"></canvas>
+      </div>
+      <div class="trade-section">
+        <h2>交易</h2>
+        <form id="tradeForm">
+          <label for="coinSelect">幣種:</label>
+          <select id="coinSelect">
+            <option value="2">BTC</option>
+            <option value="3">ETH</option>
+            <option value="4">BNB</option>
+            <option value="5">ADA</option>
+            <option value="6">XRP</option>
+          </select><br><br>
+          <label for="tradeType">類型:</label>
+          <select id="tradeType">
+            <option value="BUY">買入</option>
+            <option value="SELL">賣出</option>
+          </select><br><br>
+          <label for="tradeAmount">數量:</label>
+          <input type="number" id="tradeAmount" min="1" step="0.1" required><br><br>
+          <button type="submit">交易</button>
+        </form>
+      </div>
+    </div>
   </div>
-  <div class="trade-form">
-    <label>幣種: <select id="coin-id">
-      <option value="1">BTC</option>
-      <option value="2">ETH</option>
-      <option value="3">BNB</option>
-      <option value="4">ADA</option>
-      <option value="5">XRP</option>
-    </select></label><br>
-    <label>類型: <select id="trade-type">
-      <option value="BUY">買入</option>
-      <option value="SELL">賣出</option>
-    </select></label><br>
-    <label>數量: <input type="number" id="amount" step="0.01" min="0.01"></label><br>
-    <button onclick="executeTrade()">執行交易</button>
-    <div id="wallet-display"></div>
-  </div>
-
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <script>
-    let chart;
-    const ctx = document.getElementById('price-chart').getContext('2d');
-    chart = new Chart(ctx, {
-      type: 'line',
-      data: {
-        labels: [],
-        datasets: [{
-          label: '價格走勢',
-          data: [],
-          borderColor: '#36A2EB',
-          backgroundColor: 'rgba(54, 162, 235, 0.2)',
-          fill: true
-        }]
-      },
-      options: {
-        scales: { y: { beginAtZero: false } }
-      }
-    });
-
-    async function updatePrices() {
-      const response = await fetch('/api/coins');
-      const coins = await response.json();
-      const coinId = document.getElementById('coin-id').value;
-      const coin = coins.find(c => c.coin_id == coinId);
-      document.getElementById('price-display').textContent = `當前價格: $${coin.current_price.toFixed(2)}`;
-      chart.data.labels.push(new Date().toLocaleTimeString());
-      chart.data.datasets[0].data.push(coin.current_price);
-      if (chart.data.labels.length > 20) {
-        chart.data.labels.shift();
-        chart.data.datasets[0].data.shift();
-      }
-      chart.update();
-    }
-
-    async function updateWallet() {
-      const userId = 1; // 假設用戶 ID，需動態獲取
-      const response = await fetch(`/api/users/${userId}/wallet`);
-      const wallet = await response.json();
-      document.getElementById('wallet-display').textContent = `錢包: ${wallet.map(w => `${w.symbol || 'USD'}: ${w.balance}`).join(', ')}`;
-    }
-
-    async function executeTrade() {
-      const userId = 1; // 假設用戶 ID
-      const coinId = document.getElementById('coin-id').value;
-      const type = document.getElementById('trade-type').value;
-      const amount = document.getElementById('amount').value;
-      const response = await fetch('/api/transactions', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ user_id: userId, coin_id: coinId, type, amount })
-      });
-      const result = await response.json();
-      alert(result.message);
-      updateWallet();
-    }
-
-    setInterval(updatePrices, 5000);
-    updatePrices();
-    updateWallet();
-  </script>
+  <script src="/trade.js"></script>
 </body>
 </html>
