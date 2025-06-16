@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <title>交易模擬</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 20px; }
+    .chart-container { width: 100%; height: 300px; }
+    .trade-form { margin-top: 20px; }
+  </style>
+</head>
+<body>
+  <h2>交易模擬</h2>
+  <div id="price-display"></div>
+  <div class="chart-container">
+    <canvas id="price-chart"></canvas>
+  </div>
+  <div class="trade-form">
+    <label>幣種: <select id="coin-id">
+      <option value="1">BTC</option>
+      <option value="2">ETH</option>
+      <option value="3">BNB</option>
+      <option value="4">ADA</option>
+      <option value="5">XRP</option>
+    </select></label><br>
+    <label>類型: <select id="trade-type">
+      <option value="BUY">買入</option>
+      <option value="SELL">賣出</option>
+    </select></label><br>
+    <label>數量: <input type="number" id="amount" step="0.01" min="0.01"></label><br>
+    <button onclick="executeTrade()">執行交易</button>
+    <div id="wallet-display"></div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script>
+    let chart;
+    const ctx = document.getElementById('price-chart').getContext('2d');
+    chart = new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: [],
+        datasets: [{
+          label: '價格走勢',
+          data: [],
+          borderColor: '#36A2EB',
+          backgroundColor: 'rgba(54, 162, 235, 0.2)',
+          fill: true
+        }]
+      },
+      options: {
+        scales: { y: { beginAtZero: false } }
+      }
+    });
+
+    async function updatePrices() {
+      const response = await fetch('/api/coins');
+      const coins = await response.json();
+      const coinId = document.getElementById('coin-id').value;
+      const coin = coins.find(c => c.coin_id == coinId);
+      document.getElementById('price-display').textContent = `當前價格: $${coin.current_price.toFixed(2)}`;
+      chart.data.labels.push(new Date().toLocaleTimeString());
+      chart.data.datasets[0].data.push(coin.current_price);
+      if (chart.data.labels.length > 20) {
+        chart.data.labels.shift();
+        chart.data.datasets[0].data.shift();
+      }
+      chart.update();
+    }
+
+    async function updateWallet() {
+      const userId = 1; // 假設用戶 ID，需動態獲取
+      const response = await fetch(`/api/users/${userId}/wallet`);
+      const wallet = await response.json();
+      document.getElementById('wallet-display').textContent = `錢包: ${wallet.map(w => `${w.symbol || 'USD'}: ${w.balance}`).join(', ')}`;
+    }
+
+    async function executeTrade() {
+      const userId = 1; // 假設用戶 ID
+      const coinId = document.getElementById('coin-id').value;
+      const type = document.getElementById('trade-type').value;
+      const amount = document.getElementById('amount').value;
+      const response = await fetch('/api/transactions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ user_id: userId, coin_id: coinId, type, amount })
+      });
+      const result = await response.json();
+      alert(result.message);
+      updateWallet();
+    }
+
+    setInterval(updatePrices, 5000);
+    updatePrices();
+    updateWallet();
+  </script>
+</body>
+</html>

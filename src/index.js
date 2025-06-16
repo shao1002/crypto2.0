@@ -2,19 +2,57 @@ const express = require('express');
 const cors = require('cors');
 const pool = require('./db');
 const bcrypt = require('bcryptjs');
-const app = express();
+const Binance = require('node-binance-api');
+require('dotenv').config();
 
+const binance = new Binance().options({
+  APIKEY: process.env.BINANCE_API_KEY,
+  APISECRET: process.env.BINANCE_SECRET_KEY
+});
+
+const app = express();
 const saltRounds = 10;
-const DEFAULT_COIN_ID = 0;
+const DEFAULT_COIN_ID = 0; // USD
 const PUBLIC_DIR = 'public';
 
 app.use(cors());
 app.use(express.json());
 app.use(express.static(PUBLIC_DIR));
 
-// 註冊
+// 即時價格更新（每5秒）
+setInterval(async () => {
+  const coins = [
+    { id: 1, symbol: 'BTCUSDT' },
+    { id: 2, symbol: 'ETHUSDT' },
+    { id: 3, symbol: 'BNBUSDT' },
+    { id: 4, symbol: 'ADAUSDT' },
+    { id: 5, symbol: 'XRPUSDT' }
+  ];
+  for (const coin of coins) {
+    try {
+      const ticker = await binance.prices(coin.symbol);
+      const price = parseFloat(ticker[coin.symbol]);
+      await pool.query('UPDATE coins SET current_price = $1 WHERE coin_id = $2', [price, coin.id]);
+      await pool.query('INSERT INTO price_history (coin_id, timestamp, price) VALUES ($1, NOW(), $2)', [coin.id, price]);
+    } catch (err) {
+      console.error(`更新 ${coin.symbol} 價格失敗: ${err.message}`);
+    }
+  }
+}, 5000);
+
+// 獲取幣種價格
+app.get('/api/coins', async (req, res) => {
+  try {
+    const result = await pool.query('SELECT * FROM coins');
+    res.json(result.rows);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+// 註冊（允許輸入初始資金）
 app.post('/api/users/register', async (req, res) => {
-  const { username, password } = req.body;
+  const { username, password, initialFunds } = req.body;
   try {
     const hashedPassword = await bcrypt.hash(password, saltRounds);
     const result = await pool.query(
@@ -22,8 +60,8 @@ app.post('/api/users/register', async (req, res) => {
       [username, hashedPassword]
     );
     const userId = result.rows[0].user_id;
-    await pool.query('INSERT INTO wallets (user_id, coin_id, balance) VALUES ($1, $2, 1000)', [userId, DEFAULT_COIN_ID]);
-    res.status(201).json({ message: '註冊成功' });
+    await pool.query('INSERT INTO wallets (user_id, coin_id, balance) VALUES ($1, $2, $3)', [userId, DEFAULT_COIN_ID, initialFunds || 1000]);
+    res.status(201).json({ message: '註冊成功', user_id: userId });
   } catch (err) {
     if (err.code === '23505') {
       res.status(400).json({ message: '用戶名已存在' });
@@ -50,6 +88,17 @@ app.post('/api/users/login', async (req, res) => {
     }
   } catch (err) {
     res.status(500).json({ message: '伺服器錯誤', error: err.message });
+  }
+});
+
+// 獲取錢包
+app.get('/api/users/:id/wallet', async (req, res) => {
+  const { id } = req.params;
+  try {
+    const result = await pool.query('SELECT * FROM wallets WHERE user_id = $1', [id]);
+    res.json(result.rows);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
   }
 });
 
@@ -98,5 +147,5 @@ app.post('/api/transactions', async (req, res) => {
   }
 });
 
-const PORT = 3000; // 本地使用固定端口
+const PORT = 3000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
