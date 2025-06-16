@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>登錄</title>
+  <link rel="stylesheet" href="/style.css"> <!-- 假設有 CSS 文件 -->
+</head>
+<body>
+  <h2>登錄</h2>
+  <form action="/api/users/login" method="POST">
+    <div>
+      <label for="username">用戶名</label>
+      <input type="text" id="username" name="username" required>
+    </div>
+    <div>
+      <label for="password">密碼</label>
+      <input type="password" id="password" name="password" required>
+    </div>
+    <button type="submit">登錄</button>
+    <p>註冊？<a href="/register.html">註冊</a></p>
+  </form>
+
+  <!-- 可選：簡單的 JavaScript 回饋 -->
+  <script>
+    document.querySelector('form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const formData = new FormData(e.target);
+      const response = await fetch('/api/users/login', {
+        method: 'POST',
+        body: new URLSearchParams(formData)
+      });
+      const result = await response.json();
+      if (result.user_id) {
+        alert('登錄成功');
+      } else {
+        alert(result.message || '操作失敗');
+      }
+    });
+  </script>
+</body>
+</html>
